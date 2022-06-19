@@ -1,0 +1,50 @@
+version: '3.7'
+
+services:
+
+  elasticsearch_dev:
+    build:
+      context: ./elastic/elasticsearch/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    hostname: elasticsearch
+    restart: always
+    volumes:
+      - ./elastic/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,z
+      - ./elastic/data:/usr/share/elasticsearch/data:z
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      ES_JAVA_OPTS: -Xmx256m -Xms256m
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-}
+      # Use single node discovery in order to disable production mode and avoid bootstrap checks.
+      # see: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/bootstrap-checks.html
+      discovery.type: single-node
+    networks:
+      - elasticsearch_dev
+
+  kibana_dev:
+    build:
+      context: ./elastic/kibana/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    hostname: kibana
+    restart: always
+    volumes:
+      - ./elastic/kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro,Z
+    ports:
+      - "5601:5601"
+    environment:
+      SERVER_NAME: kibana_dev
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD:-}
+    networks:
+      - elasticsearch_dev
+    depends_on:
+      - elasticsearch_dev
+
+
+networks:
+  elasticsearch_dev:
+    name: elasticsearch_dev
